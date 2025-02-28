@@ -255,40 +255,6 @@ class RemoteShellServer:
         else:
             return "Klien tidak ditemukan."
 
-    def download_file(self, client_address, file_name):
-        """Mengunduh file dari klien."""
-        if client_address in self.clients:
-            client_socket = self.clients[client_address]
-            client_socket.sendall(json.dumps({"command": "download", "file": file_name}).encode())
-
-            with open(file_name, "wb") as file:
-                while True:
-                    data = client_socket.recv(4096)
-                    if data.endswith(b"DONE"):
-                        file.write(data[:-4])  # Simpan data tanpa "DONE"
-                        break
-                    file.write(data)
-
-            print(f"File {file_name} berhasil diunduh.")
-        else:
-            print("Klien tidak ditemukan.")
-
-    def upload_file(self, client_address, file_name):
-        """Mengunggah file ke klien."""
-        if client_address in self.clients:
-            client_socket = self.clients[client_address]
-            if not os.path.exists(file_name):
-                print(f"File {file_name} tidak ditemukan.")
-                return
-            client_socket.sendall(json.dumps({"command": "upload", "file": file_name}).encode())
-            with open(file_name, "rb") as file:
-                while chunk := file.read(4096):
-                    client_socket.sendall(chunk)
-            client_socket.sendall(b"DONE")
-            print(f"File {file_name} berhasil dikirim.")
-        else:
-            print("Klien tidak ditemukan.")
-
     def kamera_live(self, client_address):
         """Menerima stream kamera dari klien."""
         if client_address in self.clients:
@@ -314,7 +280,7 @@ class RemoteShellServer:
 
                 frame = pickle.loads(frame_data)
 
-                cv2.imshow("Live Kamera", frame)
+                cv2.imshow("Live Kamera Klien", frame)
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -342,12 +308,6 @@ class RemoteShellServer:
                     self.send_command(client_address, {"command": "exit"})
                     del self.clients[client_address]
                     break
-                elif command.startswith("download "):
-                    file_name = command.split(" ", 1)[1]
-                    self.download_file(client_address, file_name)
-                elif command.startswith("upload "):
-                    file_name = command.split(" ", 1)[1]
-                    self.upload_file(client_address, file_name)
                 elif command == "kamera":
                     self.kamera_live(client_address)
                 else:
